@@ -1,0 +1,15 @@
+# Gradle and Kotlin build state
+.gradle/
+.kotlin/
+build/
+local.properties
+
+# Editors and local tooling
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+
+# Keep the wrapper jar
+!gradle/wrapper/gradle-wrapper.jar

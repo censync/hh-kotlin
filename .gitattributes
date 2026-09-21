@@ -1,0 +1,11 @@
+# Line endings are fixed so checkouts are identical on every platform.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+
+# Golden vectors are a byte-identical copy of hh-cpp; git must never rewrite them.
+testdata/** -text
+
+# The hand-made cases of the differential test are bytes: some lines are not UTF-8, one ends with CR LF.
+tools/edge-cases.txt -text
