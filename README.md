@@ -118,6 +118,66 @@ desktop recipes and for the product rules, and
 [SECURITY.md](https://github.com/censync/hh-cpp/blob/v1.0.0/docs/SECURITY.md) of hh-cpp for what
 a picture proves and what it does not.
 
+## A complete program
+
+A JVM command line program that writes the picture of an address to a PNG file and prints its
+tag. Gradle takes hh and the Kotlin standard library from Maven Central.
+
+`settings.gradle.kts`:
+
+```kotlin
+rootProject.name = "hh-example"
+```
+
+`build.gradle.kts`:
+
+```kotlin
+plugins {
+    kotlin("jvm") version "2.4.20"
+    application
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("io.github.censync:hh:1.0.0")
+}
+
+application {
+    mainClass = "MainKt"
+}
+```
+
+`src/main/kotlin/Main.kt`:
+
+```kotlin
+import io.github.censync.hh.BaseDigest
+import io.github.censync.hh.Fingerprint
+import java.io.File
+
+fun main() {
+    val digest = BaseDigest.ofHex("0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed")
+    val fingerprint = Fingerprint.universal(digest)
+    File("address.png").writeBytes(fingerprint.render(128).encodePng())
+    val tag = fingerprint.tag
+    println("${tag.take(3)}-${tag.drop(3)}")
+}
+```
+
+`gradle run` prints `TKS-PVH` and writes `address.png`, byte for byte the file
+`testdata/golden/evm-1-universal-128.png` that every implementation reproduces. A Maven project
+declares the same coordinates, and `kotlin-stdlib` comes with them:
+
+```xml
+<dependency>
+    <groupId>io.github.censync</groupId>
+    <artifactId>hh</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
 ## Building
 
 JDK 11 or newer; the Gradle wrapper fetches Gradle 8.9.
