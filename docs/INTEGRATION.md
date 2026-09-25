@@ -25,6 +25,84 @@ val image = fingerprint.render(sizePx, options)      // fast
   takes the bytes verbatim. Do not decode such bytes into a `String` first: decoding replaces
   every ill-formed sequence with U+FFFD, and the picture would be that of another text.
 
+### Addresses that are text
+
+The table of hh-cpp's INTEGRATION.md asks for bytes wherever one address has several spellings.
+The functions below turn the usual spellings into those bytes. They check the form and the
+checksum, not whether the address exists or whose it is, and they are not part of the library,
+which takes any bytes and any text: copy them into the application.
+
+- TON: every spelling of one account (bounceable `EQ...`, non-bounceable `UQ...`, base64 or
+  base64url, raw `0:...`) gives the same 36 bytes and so the same picture. Hashed as text, the
+  four spellings would give four unrelated pictures.
+- Bitcoin: a bech32 address may be written in capitals, as QR codes do; both spellings give one
+  picture. Base58 addresses are case-sensitive and pass unchanged.
+- Free text (a name, an e-mail address, a label a person types) is hashed exactly as given, so
+  case, spaces and the Unicode form all count: an accented letter typed as one character (U+00E9)
+  and as a letter and a combining accent (U+0065 U+0301) gives two different pictures. Normalise
+  text a person types to NFC first; what to do about case and spaces is the application's choice.
+
+```kotlin
+import java.text.Normalizer
+import java.util.Base64
+
+/**
+ * TON: the canonical 36 bytes (the workchain as 4 bytes big-endian, then the 32-byte account hash) from a
+ * user-friendly address (48 characters of base64 or base64url, any flags) or a raw one ("0:" or "-1:" and 64 hex
+ * digits). Null for anything else or for a wrong checksum. `java.util.Base64` needs Android API 26.
+ */
+fun tonAddressBytes(text: String): ByteArray? {
+    val out = ByteArray(36)
+    fun putWorkchain(workchain: Int) {
+        for (i in 0..3) out[i] = (workchain shr (24 - 8 * i)).toByte()
+    }
+    val colon = text.indexOf(':')
+    if (colon >= 0) {
+        val workchain = text.substring(0, colon)
+        val hash = text.substring(colon + 1)
+        if (workchain != "0" && workchain != "-1") return null
+        if (hash.length != 64 || !hash.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
+        putWorkchain(workchain.toInt())
+        for (i in 0 until 32) out[4 + i] = hash.substring(2 * i, 2 * i + 2).toInt(16).toByte()
+        return out
+    }
+    if (text.length != 48) return null
+    val raw = try {
+        Base64.getDecoder().decode(text.replace('-', '+').replace('_', '/'))
+    } catch (e: IllegalArgumentException) {
+        return null
+    }
+    var crc = 0 // CRC-16/XMODEM over flags, workchain and hash
+    for (i in 0 until 34) {
+        crc = crc xor ((raw[i].toInt() and 0xFF) shl 8)
+        repeat(8) { crc = (if (crc and 0x8000 != 0) (crc shl 1) xor 0x1021 else crc shl 1) and 0xFFFF }
+    }
+    if (crc != ((raw[34].toInt() and 0xFF) shl 8 or (raw[35].toInt() and 0xFF))) return null
+    putWorkchain(raw[1].toInt())
+    raw.copyInto(out, destinationOffset = 4, startIndex = 2, endIndex = 34)
+    return out
+}
+
+/**
+ * Bitcoin: bech32 and bech32m addresses (bc1, tb1, bcrt1) are case-insensitive and are hashed in lower case; one
+ * in mixed case is invalid. Base58 addresses are hashed as they are written.
+ */
+fun bitcoinAddressText(text: String): String? {
+    val lower = text.lowercase()
+    if (listOf("bc1", "tb1", "bcrt1").none { lower.startsWith(it) }) return text
+    return if (text == lower || text == text.uppercase()) lower else null
+}
+
+/** Text a person typed: one spelling per string, whatever the keyboard produced. */
+fun typedText(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFC)
+```
+
+```kotlin
+val tonDigest = tonAddressBytes(tonAddress)?.let { BaseDigest.of(it) }
+val bitcoinDigest = bitcoinAddressText(bitcoinAddress)?.let { BaseDigest.ofText(it) }
+val labelDigest = BaseDigest.ofText(typedText(label))
+```
+
 ## 2. Android
 
 ```kotlin
