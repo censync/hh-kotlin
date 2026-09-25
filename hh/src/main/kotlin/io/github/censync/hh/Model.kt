@@ -22,8 +22,11 @@ public enum class Shape {
 }
 
 /**
- * The frame of a picture. [NONE] and [PLAIN] are open to both modes. Every other style is a keyed-mode marker:
- * it tells the user that the picture is the private one, and rendering refuses it for a universal fingerprint.
+ * The frame of a picture. Every style is available in both modes: [NONE], [PLAIN], [DOUBLE] and [THICK] fit
+ * either shape, [ROUNDED], [CHAMFERED] and [BRACKETS] need the square shape, [TICKS] and [GAPS] the round one.
+ * Rendering refuses a style that does not fit the shape with [HhErrorCode.INVALID_FRAME]. A host that marks its
+ * keyed pictures with a frame picks the style; [AUTOMATIC] gives keyed square pictures rounded corners and every
+ * other picture no frame.
  */
 public enum class FrameStyle {
     /** Keyed and square: [ROUNDED]; otherwise [NONE]. */
@@ -126,10 +129,12 @@ public class ContrastReport(
 }
 
 /**
- * The look of a render. The cells, the palette and the geometry are fixed by the specification.
+ * The look of a render. The cells, the palette and the geometry are fixed by the specification; the shape, the
+ * frame and the background are the host's choice, in either mode.
  *
  * @property shape square or round.
- * @property frame the frame style; see [FrameStyle].
+ * @property frame the frame style: any style that fits [shape], for universal and keyed fingerprints alike; see
+ * [FrameStyle]. Rendering refuses a style that does not fit the shape with [HhErrorCode.INVALID_FRAME].
  * @property backgroundRgb the background colour as `0xRRGGBB`.
  * @property backgroundAlpha 0 (transparent) to 255 (opaque). Outside rounded or chamfered corners and outside
  * the disc the picture is always transparent.

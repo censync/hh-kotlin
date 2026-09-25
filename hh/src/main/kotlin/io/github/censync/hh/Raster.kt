@@ -44,11 +44,11 @@ internal object Raster {
         else -> FrameStyle.NONE
     }
 
-    fun frameAllowed(resolved: FrameStyle, mode: Mode, shape: Shape): Boolean = when (resolved) {
-        FrameStyle.NONE, FrameStyle.PLAIN -> true
-        FrameStyle.ROUNDED, FrameStyle.CHAMFERED, FrameStyle.BRACKETS -> mode == Mode.KEYED && shape == Shape.SQUARE
-        FrameStyle.DOUBLE, FrameStyle.THICK -> mode == Mode.KEYED
-        FrameStyle.TICKS, FrameStyle.GAPS -> mode == Mode.KEYED && shape == Shape.ROUND
+    /** Whether a resolved style may be used with the shape. The mode plays no part. */
+    fun frameAllowed(resolved: FrameStyle, shape: Shape): Boolean = when (resolved) {
+        FrameStyle.NONE, FrameStyle.PLAIN, FrameStyle.DOUBLE, FrameStyle.THICK -> true
+        FrameStyle.ROUNDED, FrameStyle.CHAMFERED, FrameStyle.BRACKETS -> shape == Shape.SQUARE
+        FrameStyle.TICKS, FrameStyle.GAPS -> shape == Shape.ROUND
         FrameStyle.AUTOMATIC -> false
     }
 
@@ -58,11 +58,8 @@ internal object Raster {
             throw HhException(HhErrorCode.INVALID_SIZE, "the size must be $MIN_SIZE..$MAX_SIZE")
         }
         val frame = resolveFrame(options.frame, mode, options.shape)
-        if (!frameAllowed(frame, mode, options.shape)) {
-            throw HhException(
-                HhErrorCode.INVALID_FRAME,
-                "the frame $frame is not allowed for ${options.shape} and $mode",
-            )
+        if (!frameAllowed(frame, options.shape)) {
+            throw HhException(HhErrorCode.INVALID_FRAME, "the frame $frame does not fit the shape ${options.shape}")
         }
         if (options.backgroundAlpha == 255 && Contrast.figuresX100(options.backgroundRgb) < 200) {
             throw HhException(HhErrorCode.LOW_CONTRAST, "the background is too close to a palette colour")

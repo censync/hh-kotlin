@@ -153,11 +153,11 @@ private fun generate(count: Int, seed: Int) {
         val background =
             if (random.nextInt(3) == 0) hex(random.nextBytes(4)) else backgrounds[random.nextInt(backgrounds.size)]
         val round = random.nextBoolean()
-        // Mostly a frame that fits the mode and the shape, so that most cases render.
-        val fitting = when {
-            key == "-" -> listOf("automatic", "none", "plain")
-            round -> listOf("automatic", "none", "plain", "double", "thick", "ticks", "gaps")
-            else -> listOf("automatic", "none", "plain", "rounded", "chamfered", "double", "thick", "brackets")
+        // Mostly a frame that fits the shape, so that most cases render.
+        val fitting = if (round) {
+            listOf("automatic", "none", "plain", "double", "thick", "ticks", "gaps")
+        } else {
+            listOf("automatic", "none", "plain", "rounded", "chamfered", "double", "thick", "brackets")
         }
         val frame =
             if (random.nextInt(8) == 0) frames[random.nextInt(frames.size)] else fitting[random.nextInt(fitting.size)]

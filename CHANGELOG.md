@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format follows
 its golden vectors were copied from. The algorithm itself is frozen and has no version: no
 release changes a fingerprint, a pixel or an encoded byte.
 
+## [1.1.0] - 2026-09-25
+
+Golden vectors: hh-cpp v1.1.0.
+
+### Changed
+
+- The mode no longer restricts the look: universal fingerprints take every frame style that fits
+  the shape (`ROUNDED`, `CHAMFERED`, `DOUBLE`, `THICK`, `BRACKETS`, `TICKS`, `GAPS`), which 1.0.0
+  refused with `HhErrorCode.INVALID_FRAME`. A style that does not fit the shape is still
+  `INVALID_FRAME`, and the message of that exception now names the shape alone.
+  `FrameStyle.AUTOMATIC` is unchanged: universal pictures stay frameless and keyed square
+  pictures keep their rounded corners, so every picture 1.0.0 rendered is the same to the byte.
+- The KDoc of `FrameStyle` and `RenderOptions`, the README and `docs/INTEGRATION.md` describe the
+  rule: every style of the shape in either mode, and the caption, not the frame, names the mode.
+- The golden vectors gain renders and size sweeps of universal fingerprints with every style, and
+  the error records now test the shape alone.
+- `--generate` of the `cli` module, which `tools/crosscheck.sh` runs: a generated case chooses its
+  frame by the shape alone, so universal cases render with every style that fits.
+
 ## [1.0.0] - 2026-09-21
 
 The first release. Golden vectors: hh-cpp v1.0.0.
@@ -38,4 +57,5 @@ The first release. Golden vectors: hh-cpp v1.0.0.
 - Maven publication `io.github.censync:hh` with sources and javadoc jars, optional signing and a
   Central Portal bundle (`./gradlew :hh:centralBundle`).
 
+[1.1.0]: https://github.com/censync/hh-kotlin/releases/tag/v1.1.0
 [1.0.0]: https://github.com/censync/hh-kotlin/releases/tag/v1.0.0

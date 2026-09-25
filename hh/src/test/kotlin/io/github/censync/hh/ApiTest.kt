@@ -225,6 +225,66 @@ class ApiTest {
     }
 
     @Test
+    fun everyStyleFitsItsShapeInBothModes() {
+        val universal = Fingerprint.fromBytes(addressDigest.hexToBytes(), Mode.UNIVERSAL)
+        val keyed = Fingerprint.fromBytes(addressDigest.hexToBytes(), Mode.KEYED)
+        val squareOnly = setOf(FrameStyle.ROUNDED, FrameStyle.CHAMFERED, FrameStyle.BRACKETS)
+        val roundOnly = setOf(FrameStyle.TICKS, FrameStyle.GAPS)
+        for (shape in Shape.entries) {
+            for (style in FrameStyle.entries - FrameStyle.AUTOMATIC) {
+                val options = RenderOptions(shape = shape, frame = style)
+                val fits = style !in (if (shape == Shape.SQUARE) roundOnly else squareOnly)
+                for (fp in listOf(universal, keyed)) {
+                    if (fits) {
+                        assertEquals(64, fp.render(64, options).width, "$fp $shape $style")
+                    } else {
+                        assertEquals(HhErrorCode.INVALID_FRAME, error { fp.render(64, options) }, "$fp $shape $style")
+                        assertNull(fp.renderOrNull(64, options), "$fp $shape $style")
+                    }
+                }
+            }
+        }
+        // The frame is checked before the contrast, and for the shape alone.
+        for (fp in listOf(universal, keyed)) {
+            val ticks = RenderOptions(frame = FrameStyle.TICKS, backgroundRgb = 0x7A96C5)
+            val thick = RenderOptions(frame = FrameStyle.THICK, backgroundRgb = 0x7A96C5)
+            assertEquals(HhErrorCode.INVALID_FRAME, error { fp.render(64, ticks) }, "$fp")
+            assertEquals(HhErrorCode.LOW_CONTRAST, error { fp.render(64, thick) }, "$fp")
+        }
+    }
+
+    @Test
+    fun anExplicitFrameDrawsTheSameForBothModes() {
+        // The frame depends on the style and the shape alone: two fingerprints with the same bytes and different
+        // modes give identical pixels for every explicit style.
+        val universal = Fingerprint.fromBytes(addressDigest.hexToBytes(), Mode.UNIVERSAL)
+        val keyed = Fingerprint.fromBytes(addressDigest.hexToBytes(), Mode.KEYED)
+        var compared = 0
+        for (shape in Shape.entries) {
+            for (style in FrameStyle.entries - FrameStyle.AUTOMATIC) {
+                val options = RenderOptions(shape = shape, frame = style, backgroundRgb = 0xE8EEF7, frameAlpha = 200)
+                val a = universal.renderOrNull(80, options)
+                val b = keyed.renderOrNull(80, options)
+                assertEquals(a == null, b == null, "$shape $style")
+                if (a != null && b != null) {
+                    assertContentEquals(a.toRgba(), b.toRgba(), "$shape $style")
+                    compared++
+                }
+            }
+        }
+        assertEquals(13, compared)
+        // Only AUTOMATIC depends on the mode: keyed square pictures get rounded corners, every other picture none.
+        val rounded = RenderOptions(frame = FrameStyle.ROUNDED)
+        assertContentEquals(keyed.render(80).toRgba(), universal.render(80, rounded).toRgba())
+        assertContentEquals(keyed.render(80, rounded).toRgba(), universal.render(80, rounded).toRgba())
+        val none = RenderOptions(frame = FrameStyle.NONE)
+        assertContentEquals(universal.render(80).toRgba(), keyed.render(80, none).toRgba())
+        val round = RenderOptions(shape = Shape.ROUND)
+        val roundNone = RenderOptions(shape = Shape.ROUND, frame = FrameStyle.NONE)
+        assertContentEquals(keyed.render(80, round).toRgba(), universal.render(80, roundNone).toRgba())
+    }
+
+    @Test
     fun pixelsComeInBothLayouts() {
         val fp = Fingerprint.fromBytes(addressDigest.hexToBytes(), Mode.KEYED)
         val image = fp.render(64)

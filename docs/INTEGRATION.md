@@ -2,7 +2,7 @@
 
 How to put hh-kotlin into an application. What to hash, which mode to show where and how large a
 picture must be are the same for every implementation and are described once, in
-[INTEGRATION.md of hh-cpp](https://github.com/censync/hh-cpp/blob/v1.0.0/docs/INTEGRATION.md)
+[INTEGRATION.md of hh-cpp](https://github.com/censync/hh-cpp/blob/v1.1.0/docs/INTEGRATION.md)
 (sections 1 to 4). This document adds the Kotlin side.
 
 ## 1. The three steps and what to cache
@@ -76,7 +76,7 @@ val fingerprint = key.use { Fingerprint.keyed(digest, it) }   // close() wipes t
 ```
 
 - Where the key comes from is the same for every implementation: the section "The key" of
-  [SECURITY.md of hh-cpp](https://github.com/censync/hh-cpp/blob/v1.0.0/docs/SECURITY.md). In
+  [SECURITY.md of hh-cpp](https://github.com/censync/hh-cpp/blob/v1.1.0/docs/SECURITY.md). In
   short: 32 uniformly random bytes or the output of a key derivation function, best derived from
   the wallet seed on a dedicated path, so that it needs no storage and survives a restore. There
   is no passphrase form, and the all-zero key is refused, because a zero-filled buffer is what a
@@ -119,7 +119,7 @@ check value is computed on that side as well: the first 4 bytes of
 ```kotlin
 val options = RenderOptions(
     shape = Shape.ROUND,
-    frame = FrameStyle.DOUBLE,            // a keyed-mode marker: refused for a universal fingerprint
+    frame = FrameStyle.DOUBLE,            // any style of the shape, in either mode
     backgroundRgb = 0x121212,
     backgroundAlpha = 255,
     frameAlpha = 255,
@@ -127,6 +127,14 @@ val options = RenderOptions(
 val report = options.measureContrast(pageRgb = 0x121212)
 if (report.figuresX100 < 300) { /* warn the user: figures may be hard to see */ }
 ```
+
+`FrameStyle.AUTOMATIC` gives universal pictures no frame and keyed square pictures rounded
+corners. Every style is open to both modes: `NONE`, `PLAIN`, `DOUBLE` and `THICK` fit either
+shape, `ROUNDED`, `CHAMFERED` and `BRACKETS` the square, `TICKS` and `GAPS` the round shape; a
+style that does not fit the shape is `HhErrorCode.INVALID_FRAME`. A host that marks its keyed
+pictures with a frame uses one style everywhere in the application and on every device of a
+user: a marker is only useful if it is familiar. The library does not enforce the marker, so the
+caption, not the frame, is what tells the user the mode.
 
 Rendering refuses an opaque background with less than 2:1 against any palette colour
 (`HhErrorCode.LOW_CONTRAST`). For a translucent background pass the colour of the surface underneath
@@ -140,7 +148,7 @@ background; avoid mid greys and saturated surfaces.
 | `BaseDigest.of`, `ofHex`, `ofText`, `ofUtf8` | `EMPTY_INPUT`, `INPUT_TOO_LARGE`, `INVALID_HEX`, `INVALID_ARGUMENT` (an unpaired surrogate in `ofText`) |
 | `BaseDigest.fromBytes`, `Fingerprint.fromBytes` | `INVALID_DIGEST`, `INVALID_FINGERPRINT` |
 | `SecretKey.of`, `Fingerprint.keyed` with a closed key | `INVALID_KEY` |
-| `Fingerprint.render` | `INVALID_SIZE`, `INVALID_FRAME`, `LOW_CONTRAST` |
+| `Fingerprint.render` | `INVALID_SIZE`, `INVALID_FRAME` (a frame style that does not fit the shape, in either mode), `LOW_CONTRAST` |
 | `HhImage.encodeJpeg`, `HhImage.ofRgba` | `INVALID_QUALITY`, `INVALID_IMAGE` |
 | `RenderOptions(...)`, `measureContrast`, `encodeBmp`, `encodeJpeg` | `INVALID_ARGUMENT` for a colour outside `0..0xFFFFFF` or an alpha outside `0..255` |
 
